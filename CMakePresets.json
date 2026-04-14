@@ -1,0 +1,52 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": { "major": 3, "minor": 21, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "vs2022-x64",
+      "displayName": "Visual Studio 2022 — x64",
+      "description": "Generates a .sln/.vcxproj tree under build/ using the VS 2022 generator.",
+      "generator": "Visual Studio 17 2022",
+      "architecture": { "value": "x64", "strategy": "set" },
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_CONFIGURATION_TYPES": "Debug;Release"
+      }
+    },
+    {
+      "name": "vs2022-x64-sdk-override",
+      "displayName": "VS 2022 x64 — explicit SDK path",
+      "description": "Same as vs2022-x64 but forces the ATS-SDK location. Edit ATS_SDK_ROOT below if your SDK version differs.",
+      "inherits": "vs2022-x64",
+      "cacheVariables": {
+        "ATS_SDK_ROOT": "C:/AlazarTech/ATS-SDK/7.4.0"
+      }
+    },
+    {
+      "name": "ninja-x64-release",
+      "displayName": "Ninja — x64 Release (command line)",
+      "description": "Fast command-line build. Requires running from a 'Developer Command Prompt for VS 2022' so cl.exe is on PATH.",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build-ninja",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "vs2022-x64-release",
+      "configurePreset": "vs2022-x64",
+      "configuration": "Release"
+    },
+    {
+      "name": "vs2022-x64-debug",
+      "configurePreset": "vs2022-x64",
+      "configuration": "Debug"
+    },
+    {
+      "name": "ninja-x64-release",
+      "configurePreset": "ninja-x64-release"
+    }
+  ]
+}
