@@ -47,14 +47,20 @@ static const char* boardKindToName(U32 kind) {
 }
 
 int main() {
-    U32 sdkMajor = 0, sdkMinor = 0, sdkRev = 0;
+    U8 sdkMajor = 0, sdkMinor = 0, sdkRev = 0;
     ATS_CHECK(AlazarGetSDKVersion(&sdkMajor, &sdkMinor, &sdkRev));
 
-    U32 drvMajor = 0, drvMinor = 0, drvRev = 0;
+    U8 drvMajor = 0, drvMinor = 0, drvRev = 0;
     ATS_CHECK(AlazarGetDriverVersion(&drvMajor, &drvMinor, &drvRev));
 
-    std::printf("SDK version:    %u.%u.%u\n", sdkMajor, sdkMinor, sdkRev);
-    std::printf("Driver version: %u.%u.%u\n", drvMajor, drvMinor, drvRev);
+    std::printf("SDK version:    %u.%u.%u\n",
+                static_cast<unsigned>(sdkMajor),
+                static_cast<unsigned>(sdkMinor),
+                static_cast<unsigned>(sdkRev));
+    std::printf("Driver version: %u.%u.%u\n",
+                static_cast<unsigned>(drvMajor),
+                static_cast<unsigned>(drvMinor),
+                static_cast<unsigned>(drvRev));
 
     U32 systemCount = AlazarNumOfSystems();
     std::printf("Systems:        %u\n", systemCount);
