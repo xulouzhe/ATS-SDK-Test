@@ -44,6 +44,9 @@ int main() {
         std::fprintf(stderr, "start failed: %s\n", eng.lastError().c_str());
         return EXIT_FAILURE;
     }
+    std::printf("Capture started. Waiting for trigger on CH A...\n");
+    std::printf("  (If this blocks forever, either feed a signal to CH A,\n"
+                "   or edit cfg.triggerTimeoutMs in this file to e.g. 1000 and rebuild.)\n");
 
     std::FILE* fp = std::fopen(outputPath, "wb");
     if (!fp) {
@@ -53,11 +56,18 @@ int main() {
     }
 
     auto t0 = std::chrono::steady_clock::now();
+    auto lastHeartbeat = t0;
     unsigned saved = 0;
     uint64_t lastSeq = UINT64_MAX;
     while (saved < framesToCapture) {
         auto frame = eng.latestFrame();
         if (!frame) {
+            auto now = std::chrono::steady_clock::now();
+            if (now - lastHeartbeat > std::chrono::seconds(1)) {
+                std::printf(".");
+                std::fflush(stdout);
+                lastHeartbeat = now;
+            }
             std::this_thread::sleep_for(std::chrono::milliseconds(2));
             continue;
         }
