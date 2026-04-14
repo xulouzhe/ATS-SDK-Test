@@ -40,9 +40,14 @@ message(STATUS "ATS-SDK root: ${ATS_SDK_ROOT}")
 # Pick Win32 vs x64 library directory.
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
     set(_ats_lib_dir "${ATS_SDK_ROOT}/Library/x64")
+    set(_ats_arch_label "x64 (64-bit)")
 else()
     set(_ats_lib_dir "${ATS_SDK_ROOT}/Library/Win32")
+    set(_ats_arch_label "Win32 (32-bit)")
 endif()
+
+message(STATUS "Target architecture: ${_ats_arch_label}")
+message(STATUS "ATS library folder:  ${_ats_lib_dir}")
 
 find_library(ATS_API_LIB
     NAMES ATSApi
@@ -50,7 +55,7 @@ find_library(ATS_API_LIB
     NO_DEFAULT_PATH
     REQUIRED)
 
-message(STATUS "ATSApi library: ${ATS_API_LIB}")
+message(STATUS "ATSApi.lib resolved: ${ATS_API_LIB}")
 
 add_library(ATSApi INTERFACE)
 target_include_directories(ATSApi INTERFACE "${ATS_SDK_ROOT}/Include")

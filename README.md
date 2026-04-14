@@ -1,7 +1,8 @@
-# ATS9351 SDK Test
+# ATS9351 SDK Test (Win32)
 
 Two small C++ programs that exercise an AlazarTech **ATS9351** digitizer through
-the official ATS-SDK:
+the official ATS-SDK, configured to build as **Win32 (32-bit x86)** so the code
+can eventually be merged into an existing Win32-only Visual Studio project.
 
 | Program        | What it does                                                |
 | -------------- | ----------------------------------------------------------- |
@@ -26,116 +27,148 @@ ATS-SDK-Test/
 └── README.md
 ```
 
-## Prerequisites on the Windows 10 workstation
+---
 
-1. **ATS9351 driver** installed — the board should appear under
-   *Device Manager → AlazarTech Boards* without a yellow triangle.
-2. **ATS-SDK** installed, typically at
-   `C:\AlazarTech\ATS-SDK\<version>\` (contains `Include\` and `Library\`).
-3. **Visual Studio 2022** with the "Desktop development with C++" workload
-   (this pulls in MSVC, the Windows SDK, and the bundled CMake + Ninja — no
-   separate CMake install needed).
-4. **Git** to pull this repo.
+## 1. Prerequisites on the workstation
 
-## Getting the code onto the workstation
+Tick each item before moving on:
 
-On this laptop, from the project directory:
+1. **ATS9351 driver** installed.
+   Open *Device Manager* → expand **AlazarTech Boards** → you should see
+   "ATS9351" with no yellow triangle. If not, reinstall the driver from
+   https://www.alazartech.com/ and reboot.
 
-```powershell
+2. **ATS-SDK** installed. Open a PowerShell and run:
+   ```powershell
+   dir C:\AlazarTech\ATS-SDK
+   ```
+   You should see one or more version folders (e.g. `7.4.0`). Then verify both
+   the header and the **Win32** library exist:
+   ```powershell
+   dir C:\AlazarTech\ATS-SDK\*\Include\AlazarApi.h
+   dir C:\AlazarTech\ATS-SDK\*\Library\Win32\ATSApi.lib
+   dir C:\AlazarTech\ATS-SDK\*\Library\Win32\ATSApi.dll
+   ```
+   All three commands must return a result. If `Library\Win32\ATSApi.lib` is
+   missing, your SDK install only has x64 libs — rerun the SDK installer and
+   enable the Win32 component.
+
+3. **Visual Studio 2022** with the **"Desktop development with C++"** workload.
+   This installs:
+   - MSVC v143 toolset (both x86 and x64 targets),
+   - Windows 10/11 SDK,
+   - CMake + Ninja (bundled — you do not need a separate CMake install).
+
+4. **Git** (either the standalone Git for Windows, or the one bundled with VS).
+
+---
+
+## 2. Get the code onto the workstation
+
+On **this laptop** (Mac), from the project directory, initialise a git repo and
+push it to a remote you can reach from the workstation:
+
+```bash
+cd /Users/xulouzhe/Documents/Projects/ATS-SDK-Test
 git init
 git add .
-git commit -m "Initial ATS9351 SDK test"
-# push to a remote you can reach from the workstation, e.g. GitHub / GitLab /
-# a USB drive / a file share.
+git commit -m "Initial ATS9351 SDK test (Win32 build)"
+git remote add origin <your-remote-url>
+git push -u origin main
 ```
 
-On the workstation:
+On the **workstation** (PowerShell):
 
 ```powershell
-git clone <your-remote> C:\work\ATS-SDK-Test
-cd C:\work\ATS-SDK-Test
+mkdir C:\work -Force
+cd C:\work
+git clone <your-remote-url> ATS-SDK-Test
+cd ATS-SDK-Test
 ```
 
-## Build with Visual Studio 2022
+---
 
-There's a `CMakePresets.json` in the repo, so VS 2022 picks up the project
-automatically. Pick whichever of the two options below you prefer.
+## 3. Build — Win32 (32-bit)
 
-### Option A — "Open Folder" (native CMake in VS 2022, recommended)
+The repo ships with a CMake preset named **`vs2022-Win32`** that generates a
+32-bit build. Pick one of the two paths below.
+
+### Path A — "Open Folder" in VS 2022 (recommended)
 
 1. Launch **Visual Studio 2022**.
-2. *File → Open → Folder…* and select `C:\work\ATS-SDK-Test`.
-3. VS will detect `CMakeLists.txt` + `CMakePresets.json`. In the top toolbar,
-   set the configure preset to **"Visual Studio 2022 — x64"** and wait for the
-   "CMake generation finished" message in the Output pane.
-4. In the *Solution Explorer* switch to *CMake Targets View* (the dropdown at
-   the top of the pane). You'll see `board_info` and `npt_acquire`.
-5. Right-click a target → *Set as Startup Item*. Then **Build → Build All**
-   (F7) and **Debug → Start Without Debugging** (Ctrl+F5).
+2. *File → Open → Folder…* and pick `C:\work\ATS-SDK-Test`.
+3. VS detects `CMakeLists.txt` + `CMakePresets.json`. In the top toolbar you'll
+   see three dropdowns:
+   - **Configuration**: set to `Visual Studio 2022 — Win32 (x86, default)`.
+   - **Build preset**: set to `vs2022-Win32-release` (or `-debug`).
+   - **Startup item**: set to `board_info.exe` or `npt_acquire.exe`.
+4. Wait until the *Output* pane shows `CMake generation finished`. Expected
+   lines include:
+   ```
+   -- Target architecture: Win32 (32-bit)
+   -- ATS library folder:  C:/AlazarTech/ATS-SDK/<ver>/Library/Win32
+   -- ATSApi.lib resolved: C:/AlazarTech/ATS-SDK/<ver>/Library/Win32/ATSApi.lib
+   ```
+   If you don't see those, the SDK wasn't auto-detected — skip to
+   "[If auto-detection fails](#if-cmake-cannot-find-the-ats-sdk)" below.
+5. Build: **Build → Build All** (F7).
+6. Run: **Debug → Start Without Debugging** (Ctrl+F5).
 
-If CMake can't auto-locate the SDK, choose the **"VS 2022 x64 — explicit SDK
-path"** preset instead and edit the `ATS_SDK_ROOT` value in
-`CMakePresets.json` to match your installed version (e.g.
-`C:/AlazarTech/ATS-SDK/7.4.0`). Forward slashes — CMake doesn't like backslashes
-in JSON.
+### Path B — generate a `.sln` and use VS the classic way
 
-### Option B — generate a `.sln` and open it
-
-If you prefer a classic solution file:
+From a PowerShell in the repo root:
 
 ```powershell
 cd C:\work\ATS-SDK-Test
-cmake --preset vs2022-x64
+cmake --preset vs2022-Win32
 ```
 
-This creates `build\ATS9351Test.sln`. Double-click it to open in VS 2022,
-pick **Release | x64** from the toolbar, and hit **Build → Build Solution**
+This creates `build\ATS9351Test.sln`. Double-click it to open VS 2022, set
+**Release | Win32** in the toolbar, then **Build → Build Solution**
 (Ctrl+Shift+B). Executables land in `build\Release\`.
 
-From the command line you can skip the GUI entirely:
+To build purely from the command line (no GUI clicks):
 
 ```powershell
-cmake --preset vs2022-x64
-cmake --build --preset vs2022-x64-release
+cmake --preset vs2022-Win32
+cmake --build --preset vs2022-Win32-release
 ```
 
-### If CMake can't find the ATS-SDK
+### If CMake cannot find the ATS-SDK
 
-The `CMakeLists.txt` globs `C:/AlazarTech/ATS-SDK/*` and picks the newest one
-with a valid `Include/AlazarApi.h`. If yours lives somewhere else, either:
+Either edit `CMakePresets.json` and switch to the
+`vs2022-Win32-sdk-override` preset (pointing `ATS_SDK_ROOT` at your actual
+version), **or** pass it on the command line:
 
-- edit the `ATS_SDK_ROOT` cache variable in the
-  `vs2022-x64-sdk-override` preset, **or**
-- pass it on the command line:
-  `cmake --preset vs2022-x64 -DATS_SDK_ROOT="C:/path/to/ATS-SDK/7.4.0"`
+```powershell
+cmake --preset vs2022-Win32 -DATS_SDK_ROOT="C:/AlazarTech/ATS-SDK/7.4.0"
+```
+
+Use forward slashes. Replace `7.4.0` with whatever you see under
+`C:\AlazarTech\ATS-SDK\`.
 
 ### Runtime DLL
 
-The build copies `ATSApi.dll` next to each `.exe` automatically, so you can run
-from `build\Release\` (Option B) or `build\out\build\<preset>\` (Option A) with
-no extra setup.
+The build copies `ATSApi.dll` next to each `.exe` automatically, so running
+directly from `build\Release\` works with no extra setup.
 
-## Run
+---
 
-Output path depends on how you built:
+## 4. Run the tests
 
-- **Option A (Open Folder)**: `build\board_info.exe` and `build\npt_acquire.exe`
-  (VS 2022 places them directly under the CMake binary dir it created).
-- **Option B (.sln)**: `build\Release\board_info.exe` etc.
+Open a PowerShell in `C:\work\ATS-SDK-Test` after the build succeeds.
 
-You can also press **Ctrl+F5** in VS to run the startup item directly.
-
-### 1. Board info
+### 4.1  First test — `board_info`
 
 ```powershell
-.\build\Release\board_info.exe     # Option B path
+.\build\Release\board_info.exe
 ```
 
-Expected output (values will vary):
+**Expected output** (values will vary):
 
 ```
-SDK version:    x.y.z
-Driver version: x.y.z
+SDK version:    7.4.0
+Driver version: 7.4.0
 Systems:        1
 
 System 1: 1 board(s)
@@ -150,74 +183,135 @@ System 1: 1 board(s)
 board_info OK
 ```
 
-If this fails, stop here — the code below won't work either. Typical causes:
-driver not loaded, SDK headers from a different generation than the installed
-driver, board not powered / not seated, or PCIe slot that doesn't supply enough
-lanes.
+If this prints an error, **stop** and send me the exact output before running
+`npt_acquire`. Common failure modes are listed in the Troubleshooting section.
 
-### 2. NPT acquisition
+### 4.2  Second test — `npt_acquire`
+
+**Before running:** connect a signal generator to **Channel A**. The default
+trigger is set to channel A rising through roughly +15% of full-scale with an
+infinite timeout, so without a signal the program will block forever. A small
+sine (e.g. 1 MHz, 200 mVpp) is perfect.
+
+If you just want a quick liveness check with no external signal, edit
+`src/npt_acquire.cpp` line:
+
+```cpp
+constexpr U32 triggerTimeoutMs = 0;   // 0 = wait forever
+```
+
+…change `0` to `1000` (1 second timeout per buffer). The acquisition will
+record whatever noise is on the input and still exercise the DMA path.
+
+Then run:
 
 ```powershell
-.\build\Release\npt_acquire.exe    # Option B path
+.\build\Release\npt_acquire.exe
 ```
 
-By default this captures 10 buffers × 10 records × 1024 samples × 2 channels at
-500 MS/s, triggering on channel A rising through roughly +15% of full-scale. The
-trigger timeout is `0` (wait forever), so **feed a signal into CH A** or change
-`triggerLevelCode`/`triggerTimeoutMs` at the top of `src/npt_acquire.cpp`.
-
-A healthy run prints the throughput (MB/s) and writes `ats9351_capture.bin`.
-
-### Data format of `ats9351_capture.bin`
-
-For each record (there are `recordsPerBuffer × buffersPerAcquire` of them):
+**Expected output:**
 
 ```
-[ CH A sample 0 .. CH A sample N-1 ][ CH B sample 0 .. CH B sample N-1 ]
+Board ready: bits/sample=12, bytes/sample=2, max samples/ch=...
+Buffers: count=4, size=40960 bytes each
+Starting capture... (target = 10 buffers)
+  10 / 10 buffers
+
+Captured 10 buffers (0.39 MB) in 0.00X s -> ... MB/s
+Raw samples written to: ats9351_capture.bin
+Format: interleaved by record. For each record,
+  1024 samples of CH A, then 1024 samples of CH B,
+  each sample is a uint16 (12-bit MSB-aligned).
 ```
 
-Each sample is a `uint16`, little-endian, 12 bits of data left-justified in
-the upper bits (shift right by 4 to get a 0..4095 code). Convert to volts with
+`ats9351_capture.bin` will be written in whichever directory you ran the exe
+from (usually `C:\work\ATS-SDK-Test`).
+
+### 4.3  Interpreting the binary output
+
+For each of the 100 records (10 buffers × 10 records/buffer):
 
 ```
-V = ((code - 2048) / 2048.0) * fullScaleVolts   // fullScaleVolts = 0.4 for ±400 mV
+[ 1024 × uint16 CH A ][ 1024 × uint16 CH B ]
 ```
 
-## Configuration knobs
+Each sample is a 12-bit code **left-justified** into a 16-bit word. Convert to
+volts in a quick Python snippet on the workstation (or back on this laptop):
 
-Edit the top of `src/npt_acquire.cpp`:
+```python
+import numpy as np
+raw = np.fromfile("ats9351_capture.bin", dtype="<u2")  # little-endian uint16
+raw = raw >> 4                                          # 0..4095
+fs_volts = 0.4                                          # ±400 mV range
+volts = (raw.astype("float32") - 2048.0) / 2048.0 * fs_volts
 
-| Constant               | Meaning                                             |
-| ---------------------- | --------------------------------------------------- |
-| `sampleRateId`         | `SAMPLE_RATE_*` from `AlazarApi.h`                  |
-| `inputRange`           | `INPUT_RANGE_PM_*` — check ATS9351 manual for supported ranges |
-| `postTriggerSamples`   | Samples per record (must be a multiple of 32 on ATS9351) |
-| `recordsPerBuffer`     | Records per DMA buffer                              |
-| `buffersPerAcquire`    | Total buffers to collect (0 = infinite, stop with Ctrl+C) |
-| `dmaBufferCount`       | Number of DMA buffers kept in flight on the board   |
-| `triggerLevelCode`     | 0..255; 128 ≈ 0 V                                   |
-| `triggerTimeoutMs`     | 0 waits forever; set a value if you want to capture without a trigger source |
+# Reshape into (records, 2 channels, samples)
+n = volts.size // (1024 * 2)
+x = volts.reshape(n, 2, 1024)
+chA = x[:, 0, :]
+chB = x[:, 1, :]
+```
 
-## Troubleshooting
+---
 
-- **`board_info` prints `Systems: 0`** — the driver is not loaded. Reinstall
-  the ATS driver from the AlazarTech site and reboot.
-- **CMake error: "Could not locate the ATS-SDK"** — pass `-DATS_SDK_ROOT=...`
-  as shown above.
-- **Link error `unresolved external symbol Alazar...`** — you're building the
-  wrong architecture (32-bit exe against x64 lib or vice versa). Use
-  `-A x64` on the CMake configure step.
-- **`ATSApi.dll not found` at runtime** — either the post-build copy step
-  didn't fire, or you're running from a different directory. Copy
-  `C:\AlazarTech\ATS-SDK\<ver>\Library\x64\ATSApi.dll` next to the exe.
-- **`AlazarWaitAsyncBufferComplete` times out or returns an error** — no
-  trigger arrived. Feed a signal into CH A, or raise `triggerTimeoutMs`, or
-  lower `triggerLevelCode`.
-- **Garbage data** — remember the 12-bit samples are MSB-aligned in uint16.
-  Shift right by 4 before plotting.
+## 5. Merging into your existing Win32 VS project
 
-## Feedback loop
+Once `npt_acquire` works standalone, pulling the capture code into your legacy
+project is mechanical:
 
-Run `board_info` first. If that succeeds, run `npt_acquire`. Send me the exact
-console output (including any ATS error codes) of whichever one fails, plus
-your installed SDK version (`C:\AlazarTech\ATS-SDK\<version>\`) and I'll iterate.
+1. **Copy the sources** into the legacy project tree:
+   - `include/ATSHelpers.h`
+   - whichever of `src/board_info.cpp` / `src/npt_acquire.cpp` you want to
+     reuse — or extract the acquisition code into a function with a clean
+     signature (e.g. `bool CaptureNptToFile(const Config& cfg);`) and call
+     that from your existing code.
+2. **Right-click the project → Properties**. Set **Configuration: All
+   Configurations**, **Platform: Win32**. Then:
+   - *C/C++ → General → Additional Include Directories*: add
+     `C:\AlazarTech\ATS-SDK\<ver>\Include`
+   - *C/C++ → Language → C++ Language Standard*: **ISO C++17** (or newer). The
+     helper code uses `<chrono>`, `std::vector`, and `constexpr`.
+   - *Linker → General → Additional Library Directories*: add
+     `C:\AlazarTech\ATS-SDK\<ver>\Library\Win32`
+   - *Linker → Input → Additional Dependencies*: add `ATSApi.lib`
+3. **Deploy the DLL**. Add a *Post-Build Event*:
+   ```
+   copy /Y "C:\AlazarTech\ATS-SDK\<ver>\Library\Win32\ATSApi.dll" "$(OutDir)"
+   ```
+4. **Build.** If the link fails with "unresolved external symbol Alazar…",
+   re-check that the Platform dropdown is **Win32** (not x64) — the Win32
+   `.lib` only exports the 32-bit symbols.
+5. If your legacy project still uses an older C++ standard, ship a thin C++17
+   compilation unit (just the ATS code) and expose a plain C-style function
+   signature that the rest of the legacy code can call through `extern "C"`.
+
+Tip: once the standalone test passes, copy the *exact* compile/link flags from
+`build\ATS9351Test.vcxproj` into the legacy project to avoid missing a setting.
+
+---
+
+## 6. Troubleshooting
+
+| Symptom | Likely cause / fix |
+| ------- | ------------------ |
+| `board_info` prints `Systems: 0`. | Driver not loaded. Reinstall the ATS driver, reboot, verify in Device Manager. |
+| CMake error: `Could not locate the ATS-SDK`. | Pass `-DATS_SDK_ROOT=...` as shown above, or use the `vs2022-Win32-sdk-override` preset. |
+| Link error `unresolved external symbol Alazar...`. | Platform mismatch — you're linking the x64 `.lib` into a Win32 exe or vice versa. Check the build actually used `Library\Win32\ATSApi.lib` in the CMake Output pane. |
+| `ATSApi.dll` not found at launch. | Post-build copy didn't run. Copy it manually: `copy C:\AlazarTech\ATS-SDK\<ver>\Library\Win32\ATSApi.dll build\Release\`. |
+| `AlazarWaitAsyncBufferComplete` times out or returns a non-zero code. | No trigger arrived. Feed a signal into CH A, set `triggerTimeoutMs` to a nonzero value, or lower `triggerLevelCode`. |
+| Captured samples look like full-scale noise. | Remember the 12-bit samples are MSB-aligned in uint16 — shift right by 4 before plotting. |
+| VS 2022 shows "CMake presets not found". | You opened a subfolder. Reopen `C:\work\ATS-SDK-Test` itself so the preset file is visible. |
+
+---
+
+## 7. Feedback loop
+
+Run `board_info` first. If that succeeds, run `npt_acquire`. Please send:
+
+1. The full console output of whichever program fails (ATS error codes are
+   numeric — the code also prints the decoded name).
+2. Your installed SDK version (the folder name under `C:\AlazarTech\ATS-SDK\`).
+3. The `-- ATSApi.lib resolved:` line from the VS CMake Output pane so I can
+   confirm the Win32 lib was actually picked.
+
+I'll iterate on the code here and you re-pull.
