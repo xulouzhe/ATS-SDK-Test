@@ -81,3 +81,12 @@ Thumbs.db
 *.bin
 ats9351_capture.*
 captures/
+
+# ---------------------------------------------------------------------------
+# AlazarTech SDK reference copy
+# -----
+# A verbatim copy of C:\AlazarTech\ATS-SDK\26.1.0\Samples_C\ that the
+# developer drops into the repo so Claude can read AlazarTech's reference
+# samples, headers, and libs. ~64 MB, all vendor-owned, never commit.
+# ---------------------------------------------------------------------------
+Samples_C/
