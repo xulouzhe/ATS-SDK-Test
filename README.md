@@ -246,7 +246,7 @@ rebuild.
 .\build\Release\scope.exe
 ```
 
-A window opens with a 230-pixel control panel on the left and the plot
+A window opens with a ~340-pixel control panel on the left and the plot
 area on the right.
 
 Layout:

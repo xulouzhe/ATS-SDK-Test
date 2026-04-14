@@ -142,6 +142,25 @@ Expected CMake Output pane lines (paste these back if build breaks):
   `AlazarAbortAsyncRead` BEFORE `thread::join` so the worker's 5 s
   `AlazarWaitAsyncBufferComplete` returns immediately. If you see Stop
   "hang" for 5 seconds, that ordering regressed.
+- **MFC CFormView needs `DS_CONTROL`.** A dialog template hosted inside a
+  splitter pane (or any parent window) must be declared
+  `STYLE DS_SETFONT | DS_CONTROL | WS_CHILD`. Missing `DS_CONTROL`
+  asserts in `viewform.cpp:83` on debug builds. Don't add `WS_VISIBLE`
+  either — MFC handles visibility.
+- **`DoDataExchange` IDs must match `.rc` control IDs one-for-one.** Any
+  `DDX_Control(pDX, IDC_X, m_x)` where `IDC_X` isn't in the dialog
+  template asserts in `dlgdata.cpp:40` (debug) and crashes cryptically in
+  release ("Attempted an unsupported operation"). Sanity-check with:
+  `grep -oE "IDC_[A-Z_]+" scope/ControlPanelView.cpp scope/Scope.rc | sort -u`
+  before adding new controls.
+- **GDI+ `FontFamily(L"SomeNamedFont")` fails silently** if the font
+  isn't installed — the `FontFamily` object stays in an invalid state,
+  and downstream `DrawString` returns `InvalidParameter`. Use
+  `FontFamily::GenericSansSerif()` (returns a static pointer, always
+  valid) unless you specifically need a named font.
+- **GDI+ `DrawLines` requires ≥ 2 points** — passing 0 or 1 points
+  returns `InvalidParameter`. Guard with `if (poly.size() < 2) return;`
+  in the scope's `RenderTo`.
 
 ## Collaboration rules (from past corrections)
 
