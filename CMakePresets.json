@@ -19,7 +19,7 @@
       "description": "Same as vs2022-Win32 but forces the ATS-SDK location. Edit ATS_SDK_ROOT below if auto-detection picks the wrong version.",
       "inherits": "vs2022-Win32",
       "cacheVariables": {
-        "ATS_SDK_ROOT": "C:/AlazarTech/ATS-SDK/7.4.0"
+        "ATS_SDK_ROOT": "C:/AlazarTech/ATS-SDK/26.1.0"
       }
     },
     {

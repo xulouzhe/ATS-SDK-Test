@@ -42,16 +42,39 @@ Tick each item before moving on:
    ```powershell
    dir C:\AlazarTech\ATS-SDK
    ```
-   You should see one or more version folders (e.g. `7.4.0`). Then verify both
-   the header and the **Win32** library exist:
+   You should see one or more version folders (e.g. `26.1.0`). Then verify the
+   header and the **Win32** library exist — the exact layout depends on the
+   SDK version. SDK 26.x puts everything under a `Samples_C\` subfolder:
+
+   ```powershell
+   # SDK 26.x layout (new)
+   dir C:\AlazarTech\ATS-SDK\*\Samples_C\Include\AlazarApi.h
+   dir C:\AlazarTech\ATS-SDK\*\Samples_C\Library\Win32\ATSApi.lib
+   ```
+
+   Older SDK layouts (<= 7.x) put them one level up:
+
    ```powershell
    dir C:\AlazarTech\ATS-SDK\*\Include\AlazarApi.h
    dir C:\AlazarTech\ATS-SDK\*\Library\Win32\ATSApi.lib
-   dir C:\AlazarTech\ATS-SDK\*\Library\Win32\ATSApi.dll
    ```
-   All three commands must return a result. If `Library\Win32\ATSApi.lib` is
-   missing, your SDK install only has x64 libs — rerun the SDK installer and
-   enable the Win32 component.
+
+   At least one of the two layouts must yield results. The `CMakeLists.txt`
+   auto-detects both.
+
+   **About `ATSApi.dll`:** the driver installer puts this into the Windows
+   system directories, not the SDK tree. For a Win32 (32-bit) exe on a 64-bit
+   Windows 10, the DLL is here:
+
+   ```powershell
+   dir C:\Windows\SysWOW64\ATSApi.dll
+   ```
+
+   (On 32-bit Windows it would be `C:\Windows\System32\ATSApi.dll`. The
+   "SysWOW64" name is historical — on 64-bit Windows it's the folder for
+   32-bit DLLs.) If that file exists, you're set; the exes will find the DLL
+   through the standard Windows DLL search path at runtime and CMake will
+   also copy it next to the build output as a convenience.
 
 3. **Visual Studio 2022** with the **"Desktop development with C++"** workload.
    This installs:
@@ -103,13 +126,19 @@ The repo ships with a CMake preset named **`vs2022-Win32`** that generates a
    - **Build preset**: set to `vs2022-Win32-release` (or `-debug`).
    - **Startup item**: set to `board_info.exe` or `npt_acquire.exe`.
 4. Wait until the *Output* pane shows `CMake generation finished`. Expected
-   lines include:
+   lines for an SDK 26.x install look like:
    ```
+   -- ATS-SDK root:        C:/AlazarTech/ATS-SDK/26.1.0
+   -- ATS-SDK layout:      Samples_C
+   -- ATS include folder:  C:/AlazarTech/ATS-SDK/26.1.0/Samples_C/Include
    -- Target architecture: Win32 (32-bit)
-   -- ATS library folder:  C:/AlazarTech/ATS-SDK/<ver>/Library/Win32
-   -- ATSApi.lib resolved: C:/AlazarTech/ATS-SDK/<ver>/Library/Win32/ATSApi.lib
+   -- ATS library folder:  C:/AlazarTech/ATS-SDK/26.1.0/Samples_C/Library/Win32
+   -- ATSApi.lib resolved: C:/AlazarTech/ATS-SDK/26.1.0/Samples_C/Library/Win32/ATSApi.lib
+   -- ATSApi.dll source:   C:/Windows/SysWOW64/ATSApi.dll (copied next to each exe)
    ```
-   If you don't see those, the SDK wasn't auto-detected — skip to
+   (For an older SDK the "layout" line will read `classic` and the paths won't
+   have the `Samples_C/` segment.) If you don't see these, the SDK wasn't
+   auto-detected — skip to
    "[If auto-detection fails](#if-cmake-cannot-find-the-ats-sdk)" below.
 5. Build: **Build → Build All** (F7).
 6. Run: **Debug → Start Without Debugging** (Ctrl+F5).
@@ -141,16 +170,20 @@ Either edit `CMakePresets.json` and switch to the
 version), **or** pass it on the command line:
 
 ```powershell
-cmake --preset vs2022-Win32 -DATS_SDK_ROOT="C:/AlazarTech/ATS-SDK/7.4.0"
+cmake --preset vs2022-Win32 -DATS_SDK_ROOT="C:/AlazarTech/ATS-SDK/26.1.0"
 ```
 
-Use forward slashes. Replace `7.4.0` with whatever you see under
-`C:\AlazarTech\ATS-SDK\`.
+Use forward slashes. Replace `26.1.0` with whatever you see under
+`C:\AlazarTech\ATS-SDK\`. Point at the version folder itself — CMake figures
+out whether the layout uses `Samples_C\` or not.
 
 ### Runtime DLL
 
-The build copies `ATSApi.dll` next to each `.exe` automatically, so running
-directly from `build\Release\` works with no extra setup.
+`ATSApi.dll` is installed into `C:\Windows\SysWOW64\` (32-bit DLL) and
+`C:\Windows\System32\` (64-bit DLL) by the ATS driver installer, so the exe
+can find it via the standard Windows DLL search path regardless of where you
+run it from. For convenience CMake also copies the system DLL next to each
+build output — so `build\Release\board_info.exe` works standalone too.
 
 ---
 
@@ -266,18 +299,19 @@ project is mechanical:
      signature (e.g. `bool CaptureNptToFile(const Config& cfg);`) and call
      that from your existing code.
 2. **Right-click the project → Properties**. Set **Configuration: All
-   Configurations**, **Platform: Win32**. Then:
+   Configurations**, **Platform: Win32**. Then (paths shown for SDK 26.x —
+   drop the `Samples_C\` segment if you're on an older SDK):
    - *C/C++ → General → Additional Include Directories*: add
-     `C:\AlazarTech\ATS-SDK\<ver>\Include`
+     `C:\AlazarTech\ATS-SDK\26.1.0\Samples_C\Include`
    - *C/C++ → Language → C++ Language Standard*: **ISO C++17** (or newer). The
      helper code uses `<chrono>`, `std::vector`, and `constexpr`.
    - *Linker → General → Additional Library Directories*: add
-     `C:\AlazarTech\ATS-SDK\<ver>\Library\Win32`
+     `C:\AlazarTech\ATS-SDK\26.1.0\Samples_C\Library\Win32`
    - *Linker → Input → Additional Dependencies*: add `ATSApi.lib`
-3. **Deploy the DLL**. Add a *Post-Build Event*:
-   ```
-   copy /Y "C:\AlazarTech\ATS-SDK\<ver>\Library\Win32\ATSApi.dll" "$(OutDir)"
-   ```
+3. **No DLL deployment needed.** `ATSApi.dll` is already in
+   `C:\Windows\SysWOW64\` from the driver install, so a 32-bit exe just finds
+   it. (If you want to be explicit, add a post-build event:
+   `copy /Y C:\Windows\SysWOW64\ATSApi.dll "$(OutDir)"` — but it's optional.)
 4. **Build.** If the link fails with "unresolved external symbol Alazar…",
    re-check that the Platform dropdown is **Win32** (not x64) — the Win32
    `.lib` only exports the 32-bit symbols.
@@ -297,7 +331,7 @@ Tip: once the standalone test passes, copy the *exact* compile/link flags from
 | `board_info` prints `Systems: 0`. | Driver not loaded. Reinstall the ATS driver, reboot, verify in Device Manager. |
 | CMake error: `Could not locate the ATS-SDK`. | Pass `-DATS_SDK_ROOT=...` as shown above, or use the `vs2022-Win32-sdk-override` preset. |
 | Link error `unresolved external symbol Alazar...`. | Platform mismatch — you're linking the x64 `.lib` into a Win32 exe or vice versa. Check the build actually used `Library\Win32\ATSApi.lib` in the CMake Output pane. |
-| `ATSApi.dll` not found at launch. | Post-build copy didn't run. Copy it manually: `copy C:\AlazarTech\ATS-SDK\<ver>\Library\Win32\ATSApi.dll build\Release\`. |
+| `ATSApi.dll` not found at launch. | The driver install usually places it in `C:\Windows\SysWOW64\ATSApi.dll` (Win32 exe) or `C:\Windows\System32\ATSApi.dll` (x64 exe). If missing, reinstall the ATS driver. As a quick workaround you can `copy` it from either system dir next to the `.exe`. |
 | `AlazarWaitAsyncBufferComplete` times out or returns a non-zero code. | No trigger arrived. Feed a signal into CH A, set `triggerTimeoutMs` to a nonzero value, or lower `triggerLevelCode`. |
 | Captured samples look like full-scale noise. | Remember the 12-bit samples are MSB-aligned in uint16 — shift right by 4 before plotting. |
 | VS 2022 shows "CMake presets not found". | You opened a subfolder. Reopen `C:\work\ATS-SDK-Test` itself so the preset file is visible. |
