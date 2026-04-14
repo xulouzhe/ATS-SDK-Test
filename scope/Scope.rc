@@ -1,0 +1,103 @@
+// Scope.rc — resources for the MFC scope app.
+//
+// Kept intentionally small: a dialog template for the control panel (which
+// the CFormView loads at runtime) and a basic menu + icon. No wizard
+// scaffolding, no about-box etc.
+
+#include "Resource.h"
+#include <afxres.h>
+#include <windows.h>
+
+// -----------------------------------------------------------------------------
+// Control-panel dialog template.
+// IDD_CONTROL_PANEL is loaded by CControlPanelView (CFormView).
+// Coordinates are in dialog units (8 DLUs ≈ 1 avg-char width, 8 DLUs ≈ 1 line).
+// Width 180 DLUs * 260 DLUs tall is a comfortable docked panel.
+// -----------------------------------------------------------------------------
+IDD_CONTROL_PANEL DIALOGEX 0, 0, 200, 330
+STYLE DS_SETFONT | WS_CHILD | WS_VISIBLE
+FONT 9, "Segoe UI", 400, 0, 0x1
+BEGIN
+    // ---- Run/Stop + status ---------------------------------------------
+    PUSHBUTTON      "Run",            IDC_RUN_STOP,              8,   8,  60, 20
+    LTEXT           "Stopped",        IDC_STATUS,               76,  12, 120,  8
+
+    // ---- Timebase ------------------------------------------------------
+    GROUPBOX        "Timebase",       IDC_STATIC,                8,  34, 184,  52
+    LTEXT           "Sample rate:",   IDC_STATIC,               16,  48,  60,  8
+    COMBOBOX        IDC_SAMPLE_RATE,                            76,  46, 108, 80,
+                    CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Samples/rec:",   IDC_STATIC,               16,  66,  60,  8
+    COMBOBOX        IDC_SAMPLES_PER_RECORD,                     76,  64, 108, 80,
+                    CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+
+    // ---- Channel A -----------------------------------------------------
+    GROUPBOX        "Channel A (yellow)", IDC_STATIC,            8,  92, 184,  88
+    AUTOCHECKBOX    "Enable",         IDC_ENABLE_A,             16, 106,  50, 10
+    LTEXT           "HW range:",      IDC_STATIC,               16, 120,  50,  8
+    COMBOBOX        IDC_RANGE_A,                                76, 118, 108, 80,
+                    CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Coupling:",      IDC_STATIC,               16, 136,  50,  8
+    COMBOBOX        IDC_COUPLING_A,                             76, 134, 108, 80,
+                    CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Display zoom:",  IDC_STATIC,               16, 152,  50,  8
+    CONTROL         "",               IDC_ZOOM_A, "msctls_trackbar32",
+                    TBS_HORZ | TBS_AUTOTICKS | WS_TABSTOP,      76, 150, 108, 14
+    LTEXT           "1.0x",           IDC_ZOOM_A_LABEL,        156, 166,  28,  8
+    LTEXT           "Offset:",        IDC_STATIC,               16, 166,  50,  8
+    CONTROL         "",               IDC_OFFSET_A, "msctls_trackbar32",
+                    TBS_HORZ | TBS_AUTOTICKS | WS_TABSTOP,      76, 164,  76, 14
+
+    // ---- Channel B -----------------------------------------------------
+    GROUPBOX        "Channel B (cyan)", IDC_STATIC,              8, 184, 184,  68
+    AUTOCHECKBOX    "Enable",         IDC_ENABLE_B,             16, 198,  50, 10
+    LTEXT           "HW range:",      IDC_STATIC,               16, 212,  50,  8
+    COMBOBOX        IDC_RANGE_B,                                76, 210, 108, 80,
+                    CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Display zoom:",  IDC_STATIC,               16, 228,  50,  8
+    CONTROL         "",               IDC_ZOOM_B, "msctls_trackbar32",
+                    TBS_HORZ | TBS_AUTOTICKS | WS_TABSTOP,      76, 226, 108, 14
+    LTEXT           "1.0x",           IDC_ZOOM_B_LABEL,        156, 242,  28,  8
+
+    // ---- Trigger -------------------------------------------------------
+    GROUPBOX        "Trigger",        IDC_STATIC,                8, 256, 184,  66
+    LTEXT           "Source:",        IDC_STATIC,               16, 270,  50,  8
+    COMBOBOX        IDC_TRIGGER_SOURCE,                         76, 268, 108, 80,
+                    CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Slope:",         IDC_STATIC,               16, 286,  50,  8
+    COMBOBOX        IDC_TRIGGER_SLOPE,                          76, 284, 108, 80,
+                    CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Level:",         IDC_STATIC,               16, 302,  50,  8
+    CONTROL         "",               IDC_TRIGGER_LEVEL, "msctls_trackbar32",
+                    TBS_HORZ | TBS_AUTOTICKS | WS_TABSTOP,      76, 300, 108, 14
+    LTEXT           "128",            IDC_TRIGGER_LEVEL_LABEL, 156, 316,  28,  8
+END
+
+// -----------------------------------------------------------------------------
+// Minimal menu with just Exit.
+// -----------------------------------------------------------------------------
+IDR_MAINFRAME MENU
+BEGIN
+    POPUP "&File"
+    BEGIN
+        MENUITEM "E&xit",    ID_APP_EXIT
+    END
+END
+
+// -----------------------------------------------------------------------------
+// Accelerators (Alt+F4 already handled by the frame; just include the table
+// so MFC's wiring doesn't complain).
+// -----------------------------------------------------------------------------
+IDR_MAINFRAME ACCELERATORS
+BEGIN
+    "Q",            ID_APP_EXIT,    VIRTKEY, CONTROL
+END
+
+// -----------------------------------------------------------------------------
+// String table
+// -----------------------------------------------------------------------------
+STRINGTABLE
+BEGIN
+    IDR_MAINFRAME   "ATS9351 Scope\n\nAtsScope\n\n\nAtsScope.Document\nATS9351 Scope"
+    ID_APP_EXIT     "Exit the application"
+END

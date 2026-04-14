@@ -6,18 +6,29 @@ re-deriving everything.
 ## Project purpose
 
 Exercise an **AlazarTech ATS9351** PCIe digitizer through the official ATS-SDK,
-as a standalone test, with the goal of **eventually merging the acquisition
-code into an existing Win32-only Visual Studio project**. That legacy-project
-merge is the whole reason this is a Win32 build, not x64.
+with the goal of **eventually merging the acquisition code into an existing
+Win32-only Visual Studio project**. That legacy-project merge is the whole
+reason this is a Win32 build, not x64.
 
-Two programs:
-- `src/board_info.cpp` — enumerates ATS systems, prints board/SDK/driver/FPGA
-  info. First thing to run to prove the driver + SDK + board are wired up.
-- `src/npt_acquire.cpp` — AutoDMA "No-Pre-Trigger" capture, both channels at
-  500 MS/s, writes raw samples to `ats9351_capture.bin`.
+Three targets, one shared engine:
 
-`include/ATSHelpers.h` has `ATS_CHECK` (abort on non-`ApiSuccess`) and a
-sample-rate-constant → Hz lookup.
+- **`libats/`** — static library `ats`. Wraps NPT AutoDMA acquisition in a
+  free-running thread-safe `AcquisitionEngine`. Consumers call `open()`,
+  `configure(cfg)`, `start()`, and poll `latestFrame()`. Intermediate frames
+  are dropped (engine tracks the drop count). This is the code the user
+  ultimately wants to merge into the legacy project.
+- **`src/board_info.cpp`** — console: enumerate boards, print SDK/driver/FPGA
+  versions. First smoke test.
+- **`src/npt_acquire.cpp`** — console: thin CLI client of `AcquisitionEngine`.
+  Captures N frames, writes to `ats9351_capture.bin`. Useful for verifying
+  the engine without the GUI.
+- **`scope/`** — MFC SDI oscilloscope GUI. Splitter with control panel (left)
+  and GDI+ plot (right). Runs acquisition in the background, polls
+  `latestFrame()` on a 30 Hz view timer. Subsystem: Windows GUI. MFC is
+  used as a shared DLL; `CMAKE_MFC_FLAG` is scoped via `add_subdirectory`.
+
+Supporting file: `include/ATSHelpers.h` still hosts the `ATS_CHECK`
+fail-fast macro used only by `board_info.cpp`.
 
 ## Environment constraints
 
@@ -114,8 +125,23 @@ Expected CMake Output pane lines (paste these back if build breaks):
 - **Default trigger is CH A rising + infinite timeout.** Without a signal
   on CH A the acquire loop blocks forever. For a quick no-signal smoke test,
   bump `triggerTimeoutMs` from 0 to `1000` at the top of `npt_acquire.cpp`.
-- **Win32 build uses `VirtualAlloc` for DMA buffers**, so `npt_acquire.cpp`
-  explicitly `#include <windows.h>` (wrapped in `#ifdef _WIN32`).
+- **Use AlazarAllocBufferU16 / AlazarFreeBufferU16** for DMA buffers, not
+  `VirtualAlloc`. AlazarTech's helpers do the page-alignment properly and are
+  what their reference samples use. The engine already does this.
+- **ATS9351 hardware input range is fixed at ±400 mV.** Other `INPUT_RANGE_PM_*`
+  constants exist in `AlazarCmd.h` but aren't accepted by this board. The
+  scope UI exposes a range dropdown with just the single valid option; all
+  other "Volts/div" behaviour is software scaling via the `displayA().zoom`
+  and `displayB().zoom` fields on the document.
+- **MFC + CMake gotcha.** `CMAKE_MFC_FLAG` is a directory-scoped variable,
+  not a target property. If it leaks into a directory that builds console
+  exes, those exes will link against MFC and fail strangely. Keep the flag
+  inside `scope/CMakeLists.txt` and use `add_subdirectory(scope)` from
+  the root. Never set it at the top.
+- **Thread shutdown.** `AcquisitionEngine::stop()` calls
+  `AlazarAbortAsyncRead` BEFORE `thread::join` so the worker's 5 s
+  `AlazarWaitAsyncBufferComplete` returns immediately. If you see Stop
+  "hang" for 5 seconds, that ordering regressed.
 
 ## Collaboration rules (from past corrections)
 

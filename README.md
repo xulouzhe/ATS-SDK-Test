@@ -1,17 +1,17 @@
 # ATS9351 SDK Test (Win32)
 
-Two small C++ programs that exercise an AlazarTech **ATS9351** digitizer through
-the official ATS-SDK, configured to build as **Win32 (32-bit x86)** so the code
-can eventually be merged into an existing Win32-only Visual Studio project.
+C++ harness for an AlazarTech **ATS9351** digitizer through the official
+ATS-SDK. Everything builds as **Win32 (32-bit x86)** so the acquisition code
+can be lifted into an existing Win32-only Visual Studio project.
 
-| Program        | What it does                                                |
-| -------------- | ----------------------------------------------------------- |
-| `board_info`   | Enumerates ATS systems, opens the board, prints model/serial/version info. Run this first. |
-| `npt_acquire`  | AutoDMA "No-Pre-Trigger" capture, both channels at 500 MS/s. Writes raw 12-bit samples (MSB-aligned in uint16) to `ats9351_capture.bin`. |
+| Program        | Subsystem | What it does |
+| -------------- | --------- | ------------ |
+| `board_info`   | Console   | Enumerates ATS systems, opens the board, prints model/serial/version info. Run this first. |
+| `npt_acquire`  | Console   | CLI smoke test for the acquisition engine. Captures N frames of NPT AutoDMA data to `ats9351_capture.bin`. |
+| `scope`        | Win32 GUI | MFC SDI oscilloscope app — two-pane window with a control panel on the left and a live dual-channel plot on the right. Free-running continuous capture via a background thread. |
 
-The acquisition code follows the pattern from the `SampleProgram/NPT` example
-that ships with the ATS-SDK, distilled into a single file you can edit from the
-top.
+All three share a small static library, `ats`, that wraps board setup and
+NPT AutoDMA acquisition in a free-running thread-safe `AcquisitionEngine`.
 
 ## Layout
 
@@ -19,11 +19,21 @@ top.
 ATS-SDK-Test/
 ├── CMakeLists.txt
 ├── CMakePresets.json       # VS 2022 picks this up automatically
+├── CLAUDE.md               # context for future Claude sessions
 ├── include/
-│   └── ATSHelpers.h        # ATS_CHECK macro + sample-rate table
+│   └── ATSHelpers.h        # ATS_CHECK macro (console-only, fail-fast)
+├── libats/                 # shared acquisition engine (static lib "ats")
+│   ├── AtsTypes.h          # Config / Frame structs
+│   ├── AtsAcquisition.h
+│   └── AtsAcquisition.cpp
 ├── src/
-│   ├── board_info.cpp      # Step 1: confirm the board is visible
-│   └── npt_acquire.cpp     # Step 2: AutoDMA NPT capture
+│   ├── board_info.cpp      # console: enumerate + print board info
+│   └── npt_acquire.cpp     # console: capture N frames to a file
+├── scope/                  # MFC GUI (static MFC flag scoped here)
+│   ├── CMakeLists.txt
+│   ├── pch.h / pch.cpp
+│   ├── ScopeApp.* / MainFrm.* / ScopeDoc.* / ScopeView.* / ControlPanelView.*
+│   ├── Scope.rc / Resource.h
 └── README.md
 ```
 
@@ -222,19 +232,42 @@ If this prints an error, **stop** and send me the exact output before running
 ### 4.2  Second test — `npt_acquire`
 
 **Before running:** connect a signal generator to **Channel A**. The default
-trigger is set to channel A rising through roughly +15% of full-scale with an
-infinite timeout, so without a signal the program will block forever. A small
-sine (e.g. 1 MHz, 200 mVpp) is perfect.
+trigger is CH A rising at +17% of full-scale with an infinite timeout, so
+without a signal the program will block forever. A small sine (e.g. 1 MHz,
+200 mVpp) is perfect.
 
-If you just want a quick liveness check with no external signal, edit
-`src/npt_acquire.cpp` line:
+For a no-signal liveness check, open `src/npt_acquire.cpp` and change
+`cfg.triggerTimeoutMs = 0` to e.g. `1000` (1 s software trigger), then
+rebuild.
 
-```cpp
-constexpr U32 triggerTimeoutMs = 0;   // 0 = wait forever
+### 4.3  MFC scope GUI — `scope.exe`
+
+```powershell
+.\build\Release\scope.exe
 ```
 
-…change `0` to `1000` (1 second timeout per buffer). The acquisition will
-record whatever noise is on the input and still exercise the DMA path.
+A window opens with a 230-pixel control panel on the left and the plot
+area on the right.
+
+Layout:
+
+- **Timebase** group — sample rate and samples/record picker. Changes
+  take effect on Run (or restart the running capture automatically).
+- **Channel A / B** groups — enable checkbox, hardware range (ATS9351 is
+  fixed at ±400 mV), coupling, display zoom (1×–20×), vertical offset.
+- **Trigger** group — source (CH A / CH B), slope, level (0..255, 128 = 0 V).
+- **Run / Stop** button at the top. Status text next to it ("Running",
+  "Stopped", or any error text returned by the SDK).
+
+The plot shows the first record of each captured buffer, downsampled to
+one point per horizontal pixel. 10 × 8 divisions, CH A in yellow, CH B in
+cyan. Time-per-division and volts-per-division overlays follow your
+sample rate + samples/record + zoom settings. Redraws at ~30 Hz.
+
+**If nothing appears after pressing Run:** no trigger is arriving.
+Drop the trigger level slider to near 0, or feed a signal into CH A.
+You can also widen the trigger target by toggling the slope and
+watching the status text for error messages.
 
 Then run:
 

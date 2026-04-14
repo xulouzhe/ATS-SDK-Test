@@ -14,14 +14,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 #                       C:/AlazarTech/ATS-SDK/<ver>/Library/Win32/ATSApi.lib
 #
 # Runtime: ATSApi.dll is installed into C:\Windows\System32 (for x64 exes) and
-# C:\Windows\SysWOW64 (for Win32 exes) by the ATS driver installer, so we do
-# not have to ship it — the exe picks it up via the standard DLL search path.
+# C:\Windows\SysWOW64 (for Win32 exes) by the ATS driver installer.
 #
 # Pass -DATS_SDK_ROOT="C:/AlazarTech/ATS-SDK/26.1.0" to override auto-detection.
 # -----------------------------------------------------------------------------
 
-# Helper: return the subfolder (relative to SDK root) that contains Include/Library,
-# i.e. "" for the old layout or "Samples_C" for SDK 26.x.
 function(_ats_find_inner_dir _root _out_var)
     if(EXISTS "${_root}/Samples_C/Include/AlazarApi.h")
         set(${_out_var} "Samples_C" PARENT_SCOPE)
@@ -71,7 +68,7 @@ else()
     set(_ats_layout      "${_ats_inner}")
 endif()
 
-# Pick Win32 vs x64 library directory.
+# Win32 vs x64 library directory.
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
     set(_ats_lib_dir "${_ats_lib_base}/x64")
     set(_ats_arch_label "x64 (64-bit)")
@@ -79,7 +76,6 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 else()
     set(_ats_lib_dir "${_ats_lib_base}/Win32")
     set(_ats_arch_label "Win32 (32-bit)")
-    # On 64-bit Windows the 32-bit DLL lives in SysWOW64; on 32-bit Windows in System32.
     set(_ats_system_dll "C:/Windows/SysWOW64/ATSApi.dll")
 endif()
 
@@ -97,33 +93,40 @@ find_library(ATS_API_LIB
 
 message(STATUS "ATSApi.lib resolved: ${ATS_API_LIB}")
 
+# Low-level interface target — exposes ATSApi.lib + the SDK include path.
 add_library(ATSApi INTERFACE)
 target_include_directories(ATSApi INTERFACE "${_ats_include_dir}")
 target_link_libraries(ATSApi INTERFACE "${ATS_API_LIB}")
 
 # -----------------------------------------------------------------------------
-# Executables.
+# libats — reusable acquisition engine used by both the CLI tests and the
+# MFC scope. Anyone who links to `ats` transitively gets AlazarApi.h, the
+# linker flag for ATSApi.lib, and libats/*.h on their include path.
+# -----------------------------------------------------------------------------
+add_library(ats STATIC
+    libats/AtsTypes.h
+    libats/AtsAcquisition.h
+    libats/AtsAcquisition.cpp
+)
+target_include_directories(ats PUBLIC libats)
+target_link_libraries(ats PUBLIC ATSApi)
+
+# -----------------------------------------------------------------------------
+# CLI test executables (console subsystem).
 # -----------------------------------------------------------------------------
 add_executable(board_info  src/board_info.cpp)
 target_include_directories(board_info PRIVATE include)
-target_link_libraries(board_info PRIVATE ATSApi)
+target_link_libraries(board_info PRIVATE ats)
 
 add_executable(npt_acquire src/npt_acquire.cpp)
-target_include_directories(npt_acquire PRIVATE include)
-target_link_libraries(npt_acquire PRIVATE ATSApi)
+target_link_libraries(npt_acquire PRIVATE ats)
 
 # -----------------------------------------------------------------------------
-# Runtime DLL.
-#
-# Order of preference for the ATSApi.dll source:
-#   1. A DLL sitting next to ATSApi.lib in the SDK (older layout sometimes has one).
-#   2. The system-installed DLL (C:\Windows\System32 or SysWOW64) that the driver
-#      installer puts there. This is the common case for SDK 26.x.
-#   3. If neither exists, do nothing — the exe will still find the DLL at runtime
-#      via the normal Windows DLL search path as long as the driver is installed.
+# ATSApi.dll deploy helper — used by both console exes and the scope app.
+# Expose _ats_dll_src to scope/CMakeLists.txt via normal variable scoping.
 # -----------------------------------------------------------------------------
+set(_ats_dll_src "")
 if(WIN32)
-    set(_ats_dll_src "")
     if(EXISTS "${_ats_lib_dir}/ATSApi.dll")
         set(_ats_dll_src "${_ats_lib_dir}/ATSApi.dll")
     elseif(EXISTS "${_ats_system_dll}")
@@ -140,7 +143,15 @@ if(WIN32)
     else()
         message(STATUS
             "ATSApi.dll not found in SDK or Windows system dirs. "
-            "The exes will still work as long as the ATS driver is installed "
-            "and the DLL is on the Windows DLL search path.")
+            "The exes will still resolve the DLL via Windows DLL search path "
+            "as long as the ATS driver is installed.")
     endif()
+endif()
+
+# -----------------------------------------------------------------------------
+# MFC scope GUI app. Lives in its own subdirectory so CMAKE_MFC_FLAG is
+# scoped and doesn't leak into the console exes above.
+# -----------------------------------------------------------------------------
+if(WIN32)
+    add_subdirectory(scope)
 endif()
