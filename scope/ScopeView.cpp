@@ -117,13 +117,16 @@ void CScopeView::RenderTo(Gdiplus::Graphics& g, int w, int h) {
     g.DrawLine(&axisPen, plotX, plotY + plotH / 2, plotX + plotW, plotY + plotH / 2);
     g.DrawLine(&axisPen, plotX + plotW / 2, plotY, plotX + plotW / 2, plotY + plotH);
 
-    // Text setup --------------------------------------------------------
-    FontFamily ff(L"Segoe UI");
-    Font       font(&ff, 10.0f, FontStyleRegular, UnitPixel);
-    SolidBrush textBrush(Color(255, 200, 220, 220));
-    StringFormat sf;
+    // Text setup — GenericSansSerif is guaranteed valid on every Windows
+    // install, unlike a named family which fails silently if missing.
+    const FontFamily* ff = FontFamily::GenericSansSerif();
+    Font              font(ff, 10.0f, FontStyleRegular, UnitPixel);
+    SolidBrush        textBrush(Color(255, 200, 220, 220));
+    StringFormat      sf;
 
     CScopeDoc* doc = GetDocument();
+    if (!doc) return;   // early-init race guard — can happen before the
+                        // view is fully wired to its document.
 
     // Frame info (time/div, volts/div in big text across the top)
     if (m_latest && m_latest->sampleRateHz > 0 && m_latest->samplesPerRecord > 0) {
@@ -208,6 +211,10 @@ void CScopeView::RenderTo(Gdiplus::Graphics& g, int w, int h) {
             poly.emplace_back(static_cast<float>(plotX + x * plotW),
                               static_cast<float>(plotY + y * plotH));
         }
+        // DrawLines requires at least 2 points — GDI+ returns
+        // InvalidParameter otherwise, which surfaces as the "Encountered an
+        // improper argument" dialog.
+        if (poly.size() < 2) return;
         g.DrawLines(&pen, poly.data(), static_cast<INT>(poly.size()));
     };
 

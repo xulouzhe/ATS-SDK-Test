@@ -14,8 +14,12 @@
 // Coordinates are in dialog units (8 DLUs ≈ 1 avg-char width, 8 DLUs ≈ 1 line).
 // Width 180 DLUs * 260 DLUs tall is a comfortable docked panel.
 // -----------------------------------------------------------------------------
+// DS_CONTROL is required for a dialog template used as a CFormView host
+// inside a splitter pane — it tells the dialog engine this is a sub-child
+// control, not a top-level dialog. Omitting it asserts in viewform.cpp
+// when MFC validates the template.
 IDD_CONTROL_PANEL DIALOGEX 0, 0, 200, 330
-STYLE DS_SETFONT | WS_CHILD | WS_VISIBLE
+STYLE DS_SETFONT | DS_CONTROL | WS_CHILD
 FONT 9, "Segoe UI", 400, 0, 0x1
 BEGIN
     // ---- Run/Stop + status ---------------------------------------------
