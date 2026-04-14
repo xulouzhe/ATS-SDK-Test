@@ -11,74 +11,81 @@
 // -----------------------------------------------------------------------------
 // Control-panel dialog template.
 // IDD_CONTROL_PANEL is loaded by CControlPanelView (CFormView).
-// Coordinates are in dialog units (8 DLUs ≈ 1 avg-char width, 8 DLUs ≈ 1 line).
-// Width 180 DLUs * 260 DLUs tall is a comfortable docked panel.
+//
+// DS_CONTROL is mandatory for a dialog template used as the surface of a
+// CFormView embedded in a parent window (e.g. a splitter pane).
+//
+// Layout (all positions in dialog units — 1 DLU ≈ 1.5 pixels vertically):
+//   Y=8    Run/Stop + status text
+//   Y=28   Timebase group (sample rate, samples/record)
+//   Y=84   Channel A group (enable, range, coupling, zoom, offset)
+//   Y=196  Channel B group (enable, range, coupling, zoom)
+//   Y=290  Trigger group (source, slope, level)
 // -----------------------------------------------------------------------------
-// DS_CONTROL is required for a dialog template used as a CFormView host
-// inside a splitter pane — it tells the dialog engine this is a sub-child
-// control, not a top-level dialog. Omitting it asserts in viewform.cpp
-// when MFC validates the template.
-IDD_CONTROL_PANEL DIALOGEX 0, 0, 200, 330
+IDD_CONTROL_PANEL DIALOGEX 0, 0, 210, 370
 STYLE DS_SETFONT | DS_CONTROL | WS_CHILD
 FONT 9, "Segoe UI", 400, 0, 0x1
 BEGIN
-    // ---- Run/Stop + status ---------------------------------------------
-    PUSHBUTTON      "Run",            IDC_RUN_STOP,              8,   8,  60, 20
-    LTEXT           "Stopped",        IDC_STATUS,               76,  12, 120,  8
+    // Run/Stop + status -------------------------------------------------
+    PUSHBUTTON      "Run",            IDC_RUN_STOP,              8,   8,  60,  16
+    LTEXT           "Stopped",        IDC_STATUS,               76,  12, 128,  10
 
-    // ---- Timebase ------------------------------------------------------
-    GROUPBOX        "Timebase",       IDC_STATIC,                8,  34, 184,  52
-    LTEXT           "Sample rate:",   IDC_STATIC,               16,  48,  60,  8
-    COMBOBOX        IDC_SAMPLE_RATE,                            76,  46, 108, 80,
+    // Timebase ----------------------------------------------------------
+    GROUPBOX        "Timebase",       IDC_STATIC,                8,  28, 194,  52
+    LTEXT           "Sample rate:",   IDC_STATIC,               16,  44,  54,   8
+    COMBOBOX        IDC_SAMPLE_RATE,                            74,  42, 122,  80,
                     CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
-    LTEXT           "Samples/rec:",   IDC_STATIC,               16,  66,  60,  8
-    COMBOBOX        IDC_SAMPLES_PER_RECORD,                     76,  64, 108, 80,
+    LTEXT           "Samples/rec:",   IDC_STATIC,               16,  62,  54,   8
+    COMBOBOX        IDC_SAMPLES_PER_RECORD,                     74,  60, 122,  80,
                     CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
 
-    // ---- Channel A -----------------------------------------------------
-    GROUPBOX        "Channel A (yellow)", IDC_STATIC,            8,  92, 184,  88
-    AUTOCHECKBOX    "Enable",         IDC_ENABLE_A,             16, 106,  50, 10
-    LTEXT           "HW range:",      IDC_STATIC,               16, 120,  50,  8
-    COMBOBOX        IDC_RANGE_A,                                76, 118, 108, 80,
+    // Channel A ---------------------------------------------------------
+    GROUPBOX        "Channel A (yellow)", IDC_STATIC,            8,  84, 194, 108
+    AUTOCHECKBOX    "Enable",         IDC_ENABLE_A,             16,  98,  60,  10
+    LTEXT           "HW range:",      IDC_STATIC,               16, 114,  54,   8
+    COMBOBOX        IDC_RANGE_A,                                74, 112, 122,  80,
                     CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
-    LTEXT           "Coupling:",      IDC_STATIC,               16, 136,  50,  8
-    COMBOBOX        IDC_COUPLING_A,                             76, 134, 108, 80,
+    LTEXT           "Coupling:",      IDC_STATIC,               16, 132,  54,   8
+    COMBOBOX        IDC_COUPLING_A,                             74, 130, 122,  80,
                     CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
-    LTEXT           "Display zoom:",  IDC_STATIC,               16, 152,  50,  8
+    LTEXT           "Zoom:",          IDC_STATIC,               16, 150,  54,   8
     CONTROL         "",               IDC_ZOOM_A, "msctls_trackbar32",
-                    TBS_HORZ | TBS_AUTOTICKS | WS_TABSTOP,      76, 150, 108, 14
-    LTEXT           "1.0x",           IDC_ZOOM_A_LABEL,        156, 166,  28,  8
-    LTEXT           "Offset:",        IDC_STATIC,               16, 166,  50,  8
+                    TBS_HORZ | TBS_AUTOTICKS | WS_TABSTOP,      74, 148, 102,  14
+    LTEXT           "1.0x",           IDC_ZOOM_A_LABEL,        180, 150,  22,   8
+    LTEXT           "Offset:",        IDC_STATIC,               16, 170,  54,   8
     CONTROL         "",               IDC_OFFSET_A, "msctls_trackbar32",
-                    TBS_HORZ | TBS_AUTOTICKS | WS_TABSTOP,      76, 164,  76, 14
+                    TBS_HORZ | TBS_AUTOTICKS | WS_TABSTOP,      74, 168, 122,  14
 
-    // ---- Channel B -----------------------------------------------------
-    GROUPBOX        "Channel B (cyan)", IDC_STATIC,              8, 184, 184,  68
-    AUTOCHECKBOX    "Enable",         IDC_ENABLE_B,             16, 198,  50, 10
-    LTEXT           "HW range:",      IDC_STATIC,               16, 212,  50,  8
-    COMBOBOX        IDC_RANGE_B,                                76, 210, 108, 80,
+    // Channel B ---------------------------------------------------------
+    GROUPBOX        "Channel B (cyan)", IDC_STATIC,              8, 196, 194,  90
+    AUTOCHECKBOX    "Enable",         IDC_ENABLE_B,             16, 210,  60,  10
+    LTEXT           "HW range:",      IDC_STATIC,               16, 226,  54,   8
+    COMBOBOX        IDC_RANGE_B,                                74, 224, 122,  80,
                     CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
-    LTEXT           "Display zoom:",  IDC_STATIC,               16, 228,  50,  8
+    LTEXT           "Coupling:",      IDC_STATIC,               16, 244,  54,   8
+    COMBOBOX        IDC_COUPLING_B,                             74, 242, 122,  80,
+                    CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Zoom:",          IDC_STATIC,               16, 262,  54,   8
     CONTROL         "",               IDC_ZOOM_B, "msctls_trackbar32",
-                    TBS_HORZ | TBS_AUTOTICKS | WS_TABSTOP,      76, 226, 108, 14
-    LTEXT           "1.0x",           IDC_ZOOM_B_LABEL,        156, 242,  28,  8
+                    TBS_HORZ | TBS_AUTOTICKS | WS_TABSTOP,      74, 260, 102,  14
+    LTEXT           "1.0x",           IDC_ZOOM_B_LABEL,        180, 262,  22,   8
 
-    // ---- Trigger -------------------------------------------------------
-    GROUPBOX        "Trigger",        IDC_STATIC,                8, 256, 184,  66
-    LTEXT           "Source:",        IDC_STATIC,               16, 270,  50,  8
-    COMBOBOX        IDC_TRIGGER_SOURCE,                         76, 268, 108, 80,
+    // Trigger -----------------------------------------------------------
+    GROUPBOX        "Trigger",        IDC_STATIC,                8, 290, 194,  72
+    LTEXT           "Source:",        IDC_STATIC,               16, 306,  54,   8
+    COMBOBOX        IDC_TRIGGER_SOURCE,                         74, 304, 122,  80,
                     CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
-    LTEXT           "Slope:",         IDC_STATIC,               16, 286,  50,  8
-    COMBOBOX        IDC_TRIGGER_SLOPE,                          76, 284, 108, 80,
+    LTEXT           "Slope:",         IDC_STATIC,               16, 324,  54,   8
+    COMBOBOX        IDC_TRIGGER_SLOPE,                          74, 322, 122,  80,
                     CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
-    LTEXT           "Level:",         IDC_STATIC,               16, 302,  50,  8
+    LTEXT           "Level:",         IDC_STATIC,               16, 342,  54,   8
     CONTROL         "",               IDC_TRIGGER_LEVEL, "msctls_trackbar32",
-                    TBS_HORZ | TBS_AUTOTICKS | WS_TABSTOP,      76, 300, 108, 14
-    LTEXT           "128",            IDC_TRIGGER_LEVEL_LABEL, 156, 316,  28,  8
+                    TBS_HORZ | TBS_AUTOTICKS | WS_TABSTOP,      74, 340, 102,  14
+    LTEXT           "128",            IDC_TRIGGER_LEVEL_LABEL, 180, 342,  22,   8
 END
 
 // -----------------------------------------------------------------------------
-// Minimal menu with just Exit.
+// Minimal menu.
 // -----------------------------------------------------------------------------
 IDR_MAINFRAME MENU
 BEGIN
@@ -89,8 +96,7 @@ BEGIN
 END
 
 // -----------------------------------------------------------------------------
-// Accelerators (Alt+F4 already handled by the frame; just include the table
-// so MFC's wiring doesn't complain).
+// Accelerators
 // -----------------------------------------------------------------------------
 IDR_MAINFRAME ACCELERATORS
 BEGIN

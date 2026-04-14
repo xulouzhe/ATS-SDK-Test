@@ -19,7 +19,9 @@ BOOL CMainFrame::OnCreateClient(LPCREATESTRUCT, CCreateContext* pContext) {
     // width), scope plot on the right (takes the rest).
     if (!m_splitter.CreateStatic(this, 1, 2)) return FALSE;
 
-    const int kPanelWidth = 230;   // pixels
+    // The dialog template is 210 DLU wide ≈ 315 px on a default-DPI system.
+    // Leave headroom for the scrollbar so controls don't overflow.
+    const int kPanelWidth = 340;   // pixels
     if (!m_splitter.CreateView(0, 0, RUNTIME_CLASS(CControlPanelView),
                                CSize(kPanelWidth, 400), pContext)) {
         return FALSE;
